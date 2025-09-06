@@ -24,12 +24,28 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
   const handleBid = (product: Product, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    const bidAmount = prompt(`Enter your bid amount for ${product.name}:`);
-    if (bidAmount && !isNaN(Number(bidAmount))) {
-      onAddToCart(product, Number(bidAmount));
-      alert(`Bid of $${bidAmount} placed for ${product.name}!`);
+
+    // Demand value = product.price
+    const max = typeof product.price === 'number' ? product.price : null;
+    if (max === null) {
+      alert('This product has no demand value set.');
+      return;
     }
+
+    const input = prompt(`Enter your bid for ${product.name} (0 < bid ≤ ${max}):`);
+    if (input == null) return; // user cancelled
+
+    const amount = Number(input);
+    if (!Number.isFinite(amount) || amount <= 0 || amount > max) {
+      alert(`Invalid bid. Please enter a number greater than 0 and up to ${max}.`);
+      return;
+    }
+
+    const normalized = Math.round(amount * 100) / 100; // optional: 2 decimals
+    onAddToCart(product, normalized);
+    alert(`Bid of $${normalized} placed for ${product.name}!`);
   };
+
 
   return (
     <div className="page-container">

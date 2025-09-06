@@ -71,16 +71,35 @@ function App() {
     setAddress(addrs[0]);  // choose the first, or show a picker
   };
 
-  const onPay = async () => {
-    if (!address) return alert("Connect wallet first");
+  // pass: onPay(0.1) or onPay(2.5, "SOME_ALGO_ADDRESS")
+  const onPay = async (amountAlgos: number, to = "RECIPIENT_ALGORAND_ADDRESS") => {
+    if (!Number.isFinite(amountAlgos) || amountAlgos <= 0) {
+      alert("Enter a valid amount in ALGO.");
+      return;
+    }
+
+    // Ensure we have a connected address
+    let fromAddr = address;
+    if (!fromAddr) {
+      const addrs = await onConnect();              // should return string[] or string
+      fromAddr = Array.isArray(addrs) ? addrs[0] : addrs;
+      if (!fromAddr) {
+        alert("Connect wallet first.");
+        return;
+      }
+      setAddress?.(fromAddr);                       // if you have setAddress in scope
+    }
+
+    const microAlgos = Math.round(amountAlgos * 1_000_000);
+
     const tx = await payAlgo({
-      from: address,
-      to: "RECIPIENT_ALGORAND_ADDRESS", // replace
-      microAlgos: 100000,               // 0.1 ALGO
+      from: fromAddr,
+      to,
+      microAlgos,
     });
+
     setTxId(tx);
   };
-
 
   const navigateTo = (page: Page) => {
     setAppState(prev => ({ ...prev, currentPage: page }));
