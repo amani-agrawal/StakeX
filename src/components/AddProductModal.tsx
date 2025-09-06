@@ -6,146 +6,216 @@ interface CreateProductPageProps {
   onCreate: (product: Omit<Product, 'id' | 'owner' | 'isOwned' | 'isBid'>) => void;
 }
 
+type ItemType = 'market' | 'my';
+
 const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCreate }) => {
+  const [itemType, setItemType] = useState<ItemType>('market'); // "Market Item" | "My Item"
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    image: '',
     link: '',
-    price: ''
+    price: '',            // "value"
+    yearsOfUse: '',       // only for "My Item"
+    certificate: 'no',    // only for "My Item"  ('yes' | 'no')
   });
+
+  // Support multiple (or single) image URLs
+  const [images, setImages] = useState<string[]>(['']);
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // -------- handlers --------
+  const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
 
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
+  const handleImageChange = (idx: number, value: string) => {
+    setImages(prev => {
+      const next = [...prev];
+      next[idx] = value;
+      return next;
+    });
+    if (errors.images) setErrors(prev => ({ ...prev, images: '' }));
+  };
+
+  const addImageField = () => setImages(prev => [...prev, '']);
+  const removeImageField = (idx: number) =>
+    setImages(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev);
+
+  // -------- validation --------
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
-
     if (!formData.name.trim()) newErrors.name = 'Product name is required';
     if (!formData.description.trim()) newErrors.description = 'Product description is required';
-    if (!formData.image.trim()) newErrors.image = 'Product image is required';
-    if (formData.price && isNaN(Number(formData.price))) newErrors.price = 'Price must be a valid number';
+
+    const nonEmptyImages = images.map(s => s.trim()).filter(Boolean);
+    if (nonEmptyImages.length === 0) newErrors.images = 'At least one image URL is required';
+
+    if (formData.price && isNaN(Number(formData.price))) newErrors.price = 'Value must be a valid number';
+
+    if (itemType === 'my' && formData.yearsOfUse && (isNaN(Number(formData.yearsOfUse)) || Number(formData.yearsOfUse) < 0)) {
+      newErrors.yearsOfUse = 'Years of use must be a non-negative number';
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  // -------- submit --------
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
+    const primaryImage = images.map(s => s.trim()).find(Boolean) || '';
+
+    // For now, we keep the Product type unchanged (single image).
+    // We’ll append My Item extras into the description so you don’t need a type change yet.
+    const descriptionAugmented =
+      itemType === 'my'
+        ? `${formData.description.trim()}\n\nYears of use: ${formData.yearsOfUse || 'N/A'}\nAuthenticity certificate: ${formData.certificate === 'yes' ? 'Yes' : 'No'}`
+        : formData.description.trim();
+
     const productData: Omit<Product, 'id' | 'owner' | 'isOwned' | 'isBid'> = {
       name: formData.name.trim(),
-      description: formData.description.trim(),
-      image: formData.image.trim(),
-      ...(formData.link.trim() ? { link: formData.link.trim() } : {}),
-      ...(formData.price ? { price: Number(formData.price) } : {})
+      description: descriptionAugmented,
+      image: primaryImage,
+      ...(itemType === 'market' && formData.link.trim() ? { link: formData.link.trim() } : {}),
+      ...(formData.price ? { price: Number(formData.price) } : {}),
     };
 
     onCreate(productData);
-    onNavigate('account'); // or 'landing' if you prefer returning to home
+    onNavigate('account'); // or 'landing' if you prefer
   };
 
+  // -------- UI --------
   return (
     <div className="page-container">
       {/* Top Bar */}
       <div className="top-bar">
-        <button 
-          className="btn btn-secondary"
-          onClick={() => onNavigate('cart')}
+        <button className="btn btn-secondary" onClick={() => onNavigate('cart')}>Cart</button>
+        <button className="btn btn-secondary" onClick={() => onNavigate('order')}>Orders</button>
+      </div>
+
+      {/* Switch: Market Item / My Item */}
+      <div style={{ padding: '16px', display: 'flex', gap: 8 }}>
+        <button
+          type="button"
+          className={`toggle-btn ${itemType === 'market' ? 'active' : ''}`}
+          onClick={() => setItemType('market')}
+          style={{
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+            background: itemType === 'market' ? '#eef2ff' : '#fff',
+            fontWeight: 600,
+          }}
         >
-          Cart
+          Market Item
         </button>
-        <button 
-          className="btn btn-secondary"
-          onClick={() => onNavigate('order')}
+        <button
+          type="button"
+          className={`toggle-btn ${itemType === 'my' ? 'active' : ''}`}
+          onClick={() => setItemType('my')}
+          style={{
+            padding: '8px 12px',
+            borderRadius: 8,
+            border: '1px solid #e5e7eb',
+            background: itemType === 'my' ? '#eef2ff' : '#fff',
+            fontWeight: 600,
+          }}
         >
-          Orders
+          My Item
         </button>
       </div>
 
       {/* Header */}
-      <div style={{ padding: '16px 16px 0 16px' }}>
-        <h2 style={{ margin: 0 }}>Add New Product</h2>
-        <p style={{ margin: '6px 0 0 0', fontSize: 12, opacity: 0.8 }}>
-          Fill the details below and publish your product.
-        </p>
-      </div>
+      {itemType === 'market' && (
+          <div style={{ padding: '0 16px' }}>
+            <h2 style={{ margin: 0 }}>Add a new Market Product</h2>
+            <p style={{ margin: '6px 0 0 0', fontSize: 12, opacity: 0.8 }}>
+              Fill the details below and publish your product.
+            </p>
+          </div>
+        )}
+      {itemType === 'my' && (
+          <div style={{ padding: '0 16px' }}>
+            <h2 style={{ margin: 0 }}>Add your Product</h2>
+            <p style={{ margin: '6px 0 0 0', fontSize: 12, opacity: 0.8 }}>
+              Fill the details below and publish your product.
+            </p>
+          </div>
+        )}
+      
 
       {/* Form */}
-      <form onSubmit={handleSubmit} style={{ padding: 16, display: 'grid', gap: 16, maxWidth: 560 }}>
+      <form onSubmit={handleSubmit} style={{ padding: 16, display: 'grid', gap: 16, maxWidth: 600 }}>
+        {/* Name (common) */}
         <div className="form-group">
-          <label className="form-label">
-            Product Name <span className="required">*</span>
-          </label>
+          <label className="form-label">Product Name <span className="required">*</span></label>
           <input
             type="text"
             name="name"
             value={formData.name}
-            onChange={handleInputChange}
+            onChange={handleTextChange}
             className="form-input"
             placeholder="Enter product name"
           />
           {errors.name && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.name}</div>}
         </div>
 
+        {/* Multiple / Single Images (common) */}
         <div className="form-group">
-          <label className="form-label">
-            Product Description <span className="required">*</span>
-          </label>
+          <label className="form-label">Image URL(s) <span className="required">*</span></label>
+          {images.map((url, idx) => (
+            <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => handleImageChange(idx, e.target.value)}
+                className="form-input"
+                placeholder="https://example.com/image.jpg"
+                style={{ flex: 1 }}
+              />
+              {images.length > 1 && (
+                <button type="button" className="btn btn-secondary" onClick={() => removeImageField(idx)}>
+                  −
+                </button>
+              )}
+              {idx === images.length - 1 && (
+                <button type="button" className="btn btn-primary" onClick={addImageField}>
+                  + Add
+                </button>
+              )}
+            </div>
+          ))}
+          {errors.images && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.images}</div>}
+        </div>
+
+        {/* Description (common) */}
+        <div className="form-group">
+          <label className="form-label">Description <span className="required">*</span></label>
           <textarea
             name="description"
             value={formData.description}
-            onChange={handleInputChange}
+            onChange={handleTextChange}
             className="form-textarea"
             placeholder="Enter product description"
           />
           {errors.description && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.description}</div>}
         </div>
 
+        {/* Value (common) */}
         <div className="form-group">
-          <label className="form-label">
-            Product Image URL <span className="required">*</span>
-          </label>
-          <input
-            type="url"
-            name="image"
-            value={formData.image}
-            onChange={handleInputChange}
-            className="form-input"
-            placeholder="https://example.com/image.jpg"
-          />
-          {errors.image && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.image}</div>}
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Product Link (optional)</label>
-          <input
-            type="url"
-            name="link"
-            value={formData.link}
-            onChange={handleInputChange}
-            className="form-input"
-            placeholder="https://example.com/product"
-          />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Price (optional)</label>
+          <label className="form-label">Value (optional)</label>
           <input
             type="number"
             name="price"
             value={formData.price}
-            onChange={handleInputChange}
+            onChange={handleTextChange}
             className="form-input"
             placeholder="0.00"
             step="0.01"
@@ -154,18 +224,59 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
           {errors.price && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.price}</div>}
         </div>
 
+        {/* Market-only: Link (optional) */}
+        {itemType === 'market' && (
+          <div className="form-group">
+            <label className="form-label">Product Link (optional)</label>
+            <input
+              type="url"
+              name="link"
+              value={formData.link}
+              onChange={handleTextChange}
+              className="form-input"
+              placeholder="https://example.com/product"
+            />
+          </div>
+        )}
+
+        {/* My Item-only: Years of use + Certificate */}
+        {itemType === 'my' && (
+          <>
+            <div className="form-group">
+              <label className="form-label">Years of Use (optional)</label>
+              <input
+                type="number"
+                name="yearsOfUse"
+                value={formData.yearsOfUse}
+                onChange={handleTextChange}
+                className="form-input"
+                placeholder="e.g., 2"
+                min="0"
+              />
+              {errors.yearsOfUse && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.yearsOfUse}</div>}
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">Authenticity Certificate Provided?</label>
+              <select
+                name="certificate"
+                value={formData.certificate}
+                onChange={handleTextChange}
+                className="form-input"
+              >
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+              </select>
+            </div>
+          </>
+        )}
+
+        {/* Actions */}
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => onNavigate('landing')}
-          >
+          <button type="button" className="btn btn-secondary" onClick={() => onNavigate('landing')}>
             Cancel
           </button>
-          <button
-            type="submit"
-            className="btn btn-primary"
-          >
+          <button type="submit" className="btn btn-primary">
             Publish
           </button>
         </div>
@@ -173,12 +284,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
 
       {/* Bottom Navigation */}
       <div className="bottom-bar">
-        <button
-          className="btn btn-secondary"
-          onClick={() => onNavigate('landing')}
-        >
-          Home
-        </button>
+        <button className="btn btn-secondary" onClick={() => onNavigate('landing')}>Home</button>
         <button
           className="btn btn-add"
           style={{ background: '#7c3aed', color: '#fff' }}
@@ -187,12 +293,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
         >
           +
         </button>
-        <button
-          className="btn btn-secondary"
-          onClick={() => onNavigate('account')}
-        >
-          Account
-        </button>
+        <button className="btn btn-secondary" onClick={() => onNavigate('account')}>Account</button>
       </div>
     </div>
   );
