@@ -50,3 +50,5 @@ const LogoAnimation: React.FC<LogoAnimationProps> = ({ onComplete }) => {
 };
 
 export default LogoAnimation;
+
+

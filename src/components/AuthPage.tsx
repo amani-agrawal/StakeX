@@ -225,3 +225,5 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSignUp }) => {
 };
 
 export default AuthPage;
+
+
