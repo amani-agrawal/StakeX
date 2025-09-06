@@ -6,6 +6,8 @@
     "@types/node": "^16.18.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
+    "algosdk": "^3.4.0",
+    "lute-connect": "^1.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",

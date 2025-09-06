@@ -8,6 +8,7 @@ import AuthPage from './components/AuthPage';
 import OrdersPage from './components/Orders';
 import CreateProductPage from './components/AddProductModal';
 import { AppState, Page, User, Product } from './types';
+import { connectLute, payAlgo } from "./wallet/lute";
 
 const initialUser: User = {
   id: '1',
@@ -62,6 +63,24 @@ function App() {
     myProducts: initialProducts.filter(p => p.owner === initialUser.id),
     marketProducts: initialProducts.filter(p => p.owner !== initialUser.id)
   });
+  const [address, setAddress] = useState("");
+  const [txId, setTxId] = useState("");
+
+  const onConnect = async () => {
+    const addrs = await connectLute();
+    setAddress(addrs[0]);  // choose the first, or show a picker
+  };
+
+  const onPay = async () => {
+    if (!address) return alert("Connect wallet first");
+    const tx = await payAlgo({
+      from: address,
+      to: "RECIPIENT_ALGORAND_ADDRESS", // replace
+      microAlgos: 100000,               // 0.1 ALGO
+    });
+    setTxId(tx);
+  };
+
 
   const navigateTo = (page: Page) => {
     setAppState(prev => ({ ...prev, currentPage: page }));
