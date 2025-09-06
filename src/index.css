@@ -11,3 +11,33 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
 }
+
+:root {
+  --bottom-bar-h: 64px; /* adjust if your bar is taller/shorter */
+}
+
+/* Make page tall enough and keep content clear of fixed bar */
+.page-container {
+  min-height: 100dvh; /* handles mobile browser UI better than 100vh */
+  box-sizing: border-box;
+  padding-bottom: calc(var(--bottom-bar-h) + env(safe-area-inset-bottom));
+}
+
+.bottom-bar {
+  position: fixed;
+  inset: auto 16px 0 16px; /* top,right,bottom,left → 16px side margins */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 24px;
+  padding: 10px 16px;
+
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+  z-index: 1000;
+}
+
+.bottom-bar .btn { margin: 0; }
+

@@ -25,7 +25,7 @@ export interface CartItem {
   addedAt: Date;
 }
 
-export type Page = 'landing' | 'account' | 'cart';
+export type Page = 'landing' | 'account' | 'cart' | 'post' | 'order';
 
 export interface AppState {
   currentPage: Page;

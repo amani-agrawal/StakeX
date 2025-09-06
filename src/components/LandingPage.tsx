@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Product, Page } from '../types';
-import AddProductModal from './AddProductModal';
 
 interface LandingPageProps {
   products: Product[];
@@ -15,7 +14,6 @@ const LandingPage: React.FC<LandingPageProps> = ({
   onAddToCart, 
   onAddProduct 
 }) => {
-  const [showAddModal, setShowAddModal] = useState(false);
 
   const handleAddToCart = (product: Product) => {
     onAddToCart(product);
@@ -35,16 +33,16 @@ const LandingPage: React.FC<LandingPageProps> = ({
       {/* Top Bar */}
       <div className="top-bar">
         <button 
-          className="btn btn-primary"
+          className="btn btn-secondary"
           onClick={() => onNavigate('cart')}
         >
           Cart
         </button>
         <button 
           className="btn btn-secondary"
-          onClick={() => onNavigate('cart')}
+          onClick={() => onNavigate('order')}
         >
-          Bid
+          Orders
         </button>
       </div>
 
@@ -83,33 +81,25 @@ const LandingPage: React.FC<LandingPageProps> = ({
       {/* Bottom Navigation */}
       <div className="bottom-bar">
         <button 
-          className="btn btn-secondary"
-          onClick={() => onNavigate('account')}
+          className="btn btn-primary"
+          onClick={() => onNavigate('landing')}
         >
-          Account
+          Home
         </button>
         <button 
           className="btn btn-add"
-          onClick={() => setShowAddModal(true)}
+          onClick={() => onNavigate('post')}
           title="Add New Product"
         >
           +
         </button>
         <button 
           className="btn btn-secondary"
-          onClick={() => onNavigate('landing')}
+          onClick={() => onNavigate('account')}
         >
-          Home
+          Account
         </button>
       </div>
-
-      {/* Add Product Modal */}
-      {showAddModal && (
-        <AddProductModal
-          onClose={() => setShowAddModal(false)}
-          onAddProduct={onAddProduct}
-        />
-      )}
     </div>
   );
 };

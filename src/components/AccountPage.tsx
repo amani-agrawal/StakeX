@@ -61,16 +61,16 @@ const AccountPage: React.FC<AccountPageProps> = ({
       {/* Top Bar */}
       <div className="top-bar">
         <button 
-          className="btn btn-primary"
+          className="btn btn-secondary"
           onClick={() => onNavigate('cart')}
         >
           Cart
         </button>
         <button 
           className="btn btn-secondary"
-          onClick={() => onNavigate('cart')}
+          onClick={() => onNavigate('order')}
         >
-          Bid
+          Orders
         </button>
       </div>
 
@@ -192,6 +192,20 @@ const AccountPage: React.FC<AccountPageProps> = ({
           onClick={() => onNavigate('landing')}
         >
           Home
+        </button>
+        <button 
+          className="btn btn-add"
+          
+          onClick={() => onNavigate('post')}
+          title="Add New Product"
+        >
+          +
+        </button>
+        <button 
+          className="btn btn-primary"
+          onClick={() => onNavigate('account')}
+        >
+          Account
         </button>
       </div>
     </div>

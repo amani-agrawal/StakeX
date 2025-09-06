@@ -5,6 +5,8 @@ import AccountPage from './components/AccountPage';
 import CartPage from './components/CartPage';
 import LogoAnimation from './components/LogoAnimation';
 import AuthPage from './components/AuthPage';
+import OrdersPage from './components/Orders';
+import CreateProductPage from './components/AddProductModal';
 import { AppState, Page, User, Product } from './types';
 
 const initialUser: User = {
@@ -120,7 +122,6 @@ function App() {
     }));
     
     setIsAuthenticated(true);
-    alert(`Welcome back, ${userData.name}!`);
   };
 
   const handleSignUp = (userData: { name: string; age: number; email: string; password: string; address: string }) => {
@@ -165,6 +166,16 @@ function App() {
         />;
       case 'cart':
         return <CartPage 
+          cart={appState.cart}
+          onNavigate={navigateTo}
+        />;
+      case 'post':
+        return <CreateProductPage
+           onNavigate={navigateTo}
+          onCreate={addProduct}
+        ></CreateProductPage>
+      case 'order':
+        return <OrdersPage 
           cart={appState.cart}
           ownedProducts={appState.myProducts}
           onNavigate={navigateTo}
