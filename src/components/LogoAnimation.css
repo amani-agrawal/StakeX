@@ -1,0 +1,70 @@
+.logo-animation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  opacity: 1;
+  transition: opacity 0.8s ease-out;
+}
+
+.logo-container {
+  opacity: 0;
+  transform: scale(0.3);
+  transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.logo-container.visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.logo {
+  text-align: center;
+  transition: all 0.4s ease-out;
+}
+
+.logo.scaled {
+  transform: scale(1.1);
+}
+
+.logo.fading {
+  opacity: 0;
+  transform: scale(0.8);
+}
+
+.logo-text {
+  font-size: 4rem;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 10px;
+  text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  letter-spacing: -2px;
+  background: linear-gradient(45deg, #fff, #f0f0f0);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.logo-subtitle {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.8);
+  font-weight: 300;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .logo-text {
+    font-size: 3rem;
+  }
+  
+  .logo-subtitle {
+    font-size: 1rem;
+  }
+}
