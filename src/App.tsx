@@ -12,6 +12,7 @@ import FixedSidebar from './components/OverlayDrawer';
 import { AppState, Page, User, Product } from './types';
 import { connectLute, payAlgo } from "./wallet/lute";
 import { apiService } from './services/apiService';
+import { APP_CONFIG } from './config/appConfig';
 
 const initialUser: User = {
   id: '1',
@@ -48,8 +49,9 @@ function App() {
     id: p._id || p.id || '',
     name: p.name,
     description: p.description,
-    image: p.image,
+    image: p.imageUrl || 'https://via.placeholder.com/200x200?text=No+Image', // backend now provides absolute URLs
     price: typeof p.price === 'number' ? p.price : Number(p.value ?? 0),
+    demandValue: typeof p.demandValue === 'number' ? p.demandValue : p.price, // include demandValue from backend
     owner: p.owner || p.owner_id || '',
     isOwned: currentUserId ? (p.owner === currentUserId || p.owner_id === currentUserId) : false,
     isBid: Array.isArray(p.bids) ? p.bids.length > 0 : !!p.isBid,
@@ -196,142 +198,133 @@ function App() {
     alert('Logged out successfully!');
   };
 
-  const addProduct = async (
-    product: Omit<Product, 'id' | 'owner' | 'isOwned' | 'isBid'>
-  ) => {
-    if (!appState.user || !token) {
-      alert('Please log in to add products');
-      return;
-    }
+  const addProduct = async (input: { name: string; description: string; price: number; file: File; isMarketItem?: boolean; initialBid?: number }) => {
+    if (!appState.user || !token) { alert('Please log in to add products'); return; }
 
-    // Basic FE validation (keeps you from hitting backend with bad data)
-    const name = product.name?.trim();
-    const description = product.description?.trim();
-    const image = product.image?.trim();
-    const value = Number(product.price);
+    const { name, description, price, file, isMarketItem = false, initialBid = 0 } = input;
+    if (!name.trim() || !description.trim() || !file) { alert('Fill name, description and choose an image'); return; }
+    if (!Number.isFinite(price) || price <= 0) { alert('Enter a valid price'); return; }
 
-    if (!name || !description || !image) {
-      alert('Please fill name, description, and image URL.');
-      return;
-    }
-    if (!Number.isFinite(value) || value <= 0) {
-      alert('Please enter a valid positive price.');
-      return;
-    }
+    const fd = new FormData();
+    fd.append('name', name.trim());
+    fd.append('description', description.trim());
+    fd.append('price', String(price));   // backend fills both price and value
+    fd.append('owner', appState.user.id);
+    fd.append('onMarket', 'true');
+    fd.append('isMarketItem', String(isMarketItem));
+    fd.append('initialBid', String(initialBid));
+    fd.append('image', file);            // <-- the actual file
 
-    // Send BOTH owner and owner_id to satisfy either schema
-    const payloadForApi = {
-      name,
-      image,
-      description,
-      value,
-      owner: appState.user.id,
-      owner_id: appState.user.id,
-      on_market: true,
-      bids: [],
-    };
-
-    console.log('🚀 POST /posts payload:', payloadForApi);
-
-    const created = await apiService.createProduct(payloadForApi, token);
-
+    const created = await apiService.createProductWithFile(fd, token);
     if (!created?.success) {
       console.error('❌ Create failed:', created);
-      // Show the most helpful message possible
-      const msg =
-        (created?.data as any)?.errors?.[0]?.msg || // express-validator style
-        (created?.data as any)?.details ||          // joi/celebrate style
-        created?.message ||                         // generic
-        'Failed to publish product.';
-
-      alert(`Product verification failed: ${msg}`);
+      alert(created?.message || 'Failed to publish product.');
       return;
     }
 
-    // Normalize server → FE
     const p: any = created.data;
+    console.log('🔍 Created product data:', { 
+      _id: p._id, 
+      imageUrl: p.imageUrl, 
+      image: p.image,
+      name: p.name 
+    });
+    
     const newProduct: Product = {
       id: p._id || p.id || '',
       name: p.name,
       description: p.description,
-      image: p.image,
+      image: p.imageUrl || 'https://via.placeholder.com/200x200?text=No+Image', // backend now provides absolute URLs
       price: typeof p.price === 'number' ? p.price : Number(p.value ?? 0),
-      owner: p.owner || p.owner_id || appState.user.id,
+      demandValue: typeof p.demandValue === 'number' ? p.demandValue : p.price, // include demandValue from backend
+      owner: p.owner,
       isOwned: true,
       isBid: Array.isArray(p.bids) ? p.bids.length > 0 : false,
       personalItem: p.personalItem,
     };
+    
+    console.log('🔍 New product mapped:', { 
+      id: newProduct.id, 
+      image: newProduct.image, 
+      name: newProduct.name 
+    });
 
     setAppState(prev => ({
       ...prev,
-      products: [...prev.products, newProduct],
-      myProducts: [...prev.myProducts, newProduct],
+      products: [newProduct, ...prev.products],
+      myProducts: [newProduct, ...prev.myProducts],
     }));
 
     alert('Product published successfully!');
   };
 
-  const addToCart = async (product: Product, bidAmount?: number) => {
+  const addToCart = async (product: Product) => {
     if (!appState.user || !token) {
       alert('Please log in to add items to cart');
       return;
     }
-
-    if (bidAmount != null && bidAmount > 0) {
-      // Create a bid for this product
-      try {
-        const bidData = {
-          productId: product.id,
-          amount: Number(bidAmount),
-          message: `Bid of $${bidAmount} for ${product.name}`
-        };
-        
-        const bidResponse = await apiService.createBid(bidData, token);
-        if (bidResponse.success) {
-          // Refresh products to show updated isBid status
-          const productsRes = await apiService.getProducts();
-          const allProducts = productsRes.success && productsRes.data 
-            ? productsRes.data.map(p => mapApiProduct(p, appState.user!.id))
-            : [];
-          
-          setAppState(prev => ({
-            ...prev,
-            products: allProducts,
-            myProducts: allProducts.filter(p => p.owner === prev.user!.id),
-            marketProducts: allProducts.filter(p => p.owner !== prev.user!.id),
-          }));
-          
-          alert(`Bid of $${bidAmount} placed successfully!`);
-          return;
-        } else {
-          alert('Failed to place bid. Please try again.');
-          return;
-        }
-      } catch (error) {
-        console.error('Bid creation error:', error);
-        alert('Failed to place bid. Please try again.');
-        return;
-      }
-    }
-
-    // Regular cart addition (no bid)
-    const cartItem = {
-      product,
-      bidAmount,
-      addedAt: new Date()
-    };
     
-    setAppState(prev => ({
-      ...prev,
-      cart: [...prev.cart, cartItem]
-    }));
+    // Debug logging
+    console.log('Adding to cart:', { productId: product.id, productName: product.name });
+    
+    // Regular cart addition (no bid) - sync with backend
+    try {
+      const cartResponse = await apiService.addToCart(String(product.id), token);
+      if (cartResponse.success) {
+        // Refresh cart from backend
+        await loadCartFromBackend();
+        alert('Item added to cart successfully!');
+      } else {
+        console.error('Cart API error:', cartResponse);
+        alert(cartResponse.message || 'Failed to add item to cart');
+      }
+    } catch (error) {
+      console.error('Cart addition error:', error);
+      alert('Failed to add item to cart. Please try again.');
+    }
   };
 
-  const removeFromCart = (index: number) => {
-    setAppState(prev => ({
-      ...prev,
-      cart: prev.cart.filter((_, i) => i !== index)
-    }));
+  const loadCartFromBackend = async () => {
+    if (!appState.user || !token) return;
+    
+    try {
+      const cartResponse = await apiService.getCart(token);
+      if (cartResponse.success && cartResponse.data) {
+        const { cart } = cartResponse.data;
+        const cartItems = cart.map((cartItem: any) => ({
+          product: mapApiProduct(cartItem.productId, appState.user!.id),
+          addedAt: new Date(cartItem.addedAt)
+        }));
+        
+        setAppState(prev => ({
+          ...prev,
+          cart: cartItems
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading cart from backend:', error);
+    }
+  };
+
+  const removeFromCart = async (index: number) => {
+    if (!appState.user || !token) return;
+    
+    const cartItem = appState.cart[index];
+    if (!cartItem) return;
+    
+    try {
+      const removeResponse = await apiService.removeFromCart(cartItem.product.id, token);
+      if (removeResponse.success) {
+        // Refresh cart from backend
+        await loadCartFromBackend();
+        alert('Item removed from cart successfully!');
+      } else {
+        alert(removeResponse.message || 'Failed to remove item from cart');
+      }
+    } catch (error) {
+      console.error('Cart removal error:', error);
+      alert('Failed to remove item from cart. Please try again.');
+    }
   };
 
   const updateProfilePicture = (imageUrl: string) => {
@@ -388,6 +381,10 @@ function App() {
         
         setToken(authToken);
         setIsAuthenticated(true);
+        
+        // Load cart from backend after authentication
+        await loadCartFromBackend();
+        
         alert('Login successful!');
       } else {
         alert(response.message || 'Login failed. Please check your credentials.');

@@ -5,37 +5,25 @@ const User = require('../models/User');
 const router = express.Router();
 
 // Middleware to verify JWT token
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Access token required'
-    });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key', (err, decoded) => {
-    if (err) {
-      return res.status(403).json({
-        success: false,
-        message: 'Invalid or expired token'
-      });
-    }
-    req.userId = decoded.userId;
+const requireAuth = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) return res.status(401).json({ success: false, message: 'No token' });
+  
+  jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret-key', (err, payload) => {
+    if (err) return res.status(403).json({ success: false, message: 'Invalid token' });
+    req.user = payload; // { userId, email }
     next();
   });
 };
 
 // Get user profile
-router.get('/:userId', authenticateToken, async (req, res) => {
+router.get('/:userId', requireAuth, async (req, res) => {
   try {
     const user = await User.findById(req.params.userId)
-      .populate('cart', 'name image price')
-      .populate('historyOrders', 'name image price')
-      .populate('ongoingBids', 'amount status')
-      .populate('itemsToSell', 'name image price onMarket');
+      .populate('cart.productId', 'name image price')
+      .populate('historyOrders.productId', 'name image price')
+      .populate('ongoingBids.productId', 'name image price')
+      .populate('itemsToSell.productId', 'name image price');
 
     if (!user) {
       return res.status(404).json({
@@ -59,17 +47,17 @@ router.get('/:userId', authenticateToken, async (req, res) => {
 });
 
 // Update user profile
-router.put('/:userId', authenticateToken, async (req, res) => {
+router.put('/:userId', requireAuth, async (req, res) => {
   try {
     // Check if user is updating their own profile
-    if (req.params.userId !== req.userId) {
+    if (req.params.userId !== req.user.userId) {
       return res.status(403).json({
         success: false,
         message: 'You can only update your own profile'
       });
     }
 
-    const allowedUpdates = ['name', 'age', 'address', 'profilePicture'];
+    const allowedUpdates = ['name', 'age', 'address', 'phone', 'profilePicture'];
     const updates = {};
     
     Object.keys(req.body).forEach(key => {
@@ -106,68 +94,6 @@ router.put('/:userId', authenticateToken, async (req, res) => {
   }
 });
 
-// Add item to cart
-router.post('/:userId/cart', authenticateToken, async (req, res) => {
-  try {
-    if (req.params.userId !== req.userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized'
-      });
-    }
-
-    const { productId } = req.body;
-    
-    const user = await User.findByIdAndUpdate(
-      req.params.userId,
-      { $addToSet: { cart: productId } },
-      { new: true }
-    );
-
-    res.json({
-      success: true,
-      message: 'Item added to cart',
-      data: user.cart
-    });
-
-  } catch (error) {
-    console.error('Add to cart error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
-
-// Remove item from cart
-router.delete('/:userId/cart/:productId', authenticateToken, async (req, res) => {
-  try {
-    if (req.params.userId !== req.userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized'
-      });
-    }
-
-    const user = await User.findByIdAndUpdate(
-      req.params.userId,
-      { $pull: { cart: req.params.productId } },
-      { new: true }
-    );
-
-    res.json({
-      success: true,
-      message: 'Item removed from cart',
-      data: user.cart
-    });
-
-  } catch (error) {
-    console.error('Remove from cart error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-});
+// Cart operations are now handled by /api/user/cart routes in userLists.js
 
 module.exports = router;

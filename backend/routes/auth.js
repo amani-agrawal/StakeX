@@ -11,7 +11,8 @@ const registerSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(6).required(),
   age: Joi.number().min(13).max(120).required(),
-  address: Joi.string().max(200).required()
+  address: Joi.string().max(200).required(),
+  phone: Joi.string().max(15).required()
 });
 
 const loginSchema = Joi.object({
@@ -38,7 +39,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const { name, email, password, age, address } = value;
+    const { name, email, password, age, address, phone } = value;
 
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -55,7 +56,8 @@ router.post('/register', async (req, res) => {
       email,
       password,
       age,
-      address
+      address,
+      phone
     });
 
     await user.save();

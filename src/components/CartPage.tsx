@@ -32,44 +32,46 @@ const CartPage: React.FC<CartPageProps> = ({ cart, onNavigate, onRemoveFromCart,
     const normalized = Math.round(amount * 100) / 100; // optional: 2 decimals
 
     try {
-      // Connect to Lute wallet
-      alert('Connecting to Lute wallet...');
-      const addresses = await connectLute();
-      
-      if (!addresses || addresses.length === 0) {
-        alert('Failed to connect to Lute wallet. Please try again.');
-        return;
-      }
-
-      // Use the first connected address
-      const fromAddress = addresses[0];
-      alert(`Connected to wallet: ${fromAddress.substring(0, 8)}...`);
-
-      // For demo purposes, we'll use a placeholder recipient address
-      // In a real app, this would be the seller's address or a smart contract
-      const toAddress = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Placeholder
-      
-      // Convert ALGO to microAlgos (1 ALGO = 1,000,000 microAlgos)
-      const microAlgos = Math.round(normalized * 1000000);
-
-      alert(`Processing payment of ${normalized} ALGO (${microAlgos} microAlgos)...`);
-      
-      // Process the payment through Lute
-      const txId = await payAlgo({
-        from: fromAddress,
-        to: toAddress,
-        microAlgos: microAlgos
-      });
-
-      alert(`Payment successful! Transaction ID: ${txId}`);
-      
-      // Only add to cart and create bid if payment was successful
+      // Create bid first (independent of payment)
       onAddToCart(product, normalized);
       alert(`Bid of $${normalized} placed for ${product.name}!`);
       
+      // Optional: Handle wallet payment separately (non-blocking)
+      try {
+        alert('Connecting to Lute wallet for payment...');
+        const addresses = await connectLute();
+        
+        if (addresses && addresses.length > 0) {
+          const fromAddress = addresses[0];
+          alert(`Connected to wallet: ${fromAddress.substring(0, 8)}...`);
+
+          // For demo purposes, we'll use a placeholder recipient address
+          const toAddress = product.owner;
+          
+          // Convert ALGO to microAlgos (1 ALGO = 1,000,000 microAlgos)
+          const microAlgos = Math.round(normalized * 1000000);
+
+          alert(`Processing payment of ${normalized} ALGO (${microAlgos} microAlgos)...`);
+          
+          // Process the payment through Lute
+          const txId = await payAlgo({
+            from: fromAddress,
+            to: toAddress,
+            microAlgos: microAlgos
+          });
+
+          alert(`Payment successful! Transaction ID: ${txId}`);
+        } else {
+          alert('Wallet connection failed, but bid was placed successfully.');
+        }
+      } catch (paymentError: any) {
+        console.error('Payment error:', paymentError);
+        alert(`Payment failed: ${paymentError?.message || 'Unknown error'}. Bid was still placed successfully.`);
+      }
+      
     } catch (error: any) {
-      console.error('Payment error:', error);
-      alert(`Payment failed: ${error?.message || 'Unknown error'}. Please try again.`);
+      console.error('Bid creation error:', error);
+      alert(`Failed to place bid: ${error?.message || 'Unknown error'}. Please try again.`);
     }
   };
 
@@ -82,7 +84,7 @@ const CartPage: React.FC<CartPageProps> = ({ cart, onNavigate, onRemoveFromCart,
           cart.map((item, index) => (
             <div key={index} className="cart-item">
               <img 
-                src={item.product.image} 
+                src={item.product.imageUrl || item.product.image || 'https://via.placeholder.com/200x200?text=No+Image'} 
                 alt={item.product.name}
                 className="cart-item-image"
               />
@@ -91,6 +93,11 @@ const CartPage: React.FC<CartPageProps> = ({ cart, onNavigate, onRemoveFromCart,
                 <div className="cart-item-price">
                   {item.bidAmount ? `Bid: $${item.bidAmount}` : `Price: $${item.product.price || 'N/A'}`}
                 </div>
+                {item.product.demandValue != null && typeof item.product.demandValue === 'number' && item.product.demandValue !== item.product.price && (
+                  <div className="cart-item-demand-value" style={{ color: '#ff6b35', fontWeight: 'bold', fontSize: '14px' }}>
+                    Demand Value: ${item.product.demandValue}
+                  </div>
+                )}
                 <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
                   Added: {item.addedAt.toLocaleDateString()}
                 </div>

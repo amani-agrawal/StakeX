@@ -121,7 +121,7 @@ const AccountPage: React.FC<AccountPageProps> = ({
           currentProducts.map((product) => ( ((product.personalItem===true && activeTab==='my') || (product.personalItem===false && activeTab==='market')) && (
             <div key={product.id} className="product-card">
               <img 
-                src={product.image} 
+                src={product.imageUrl || product.image || 'https://via.placeholder.com/200x200?text=No+Image'} 
                 alt={product.name}
                 className="product-image"
               />
@@ -129,6 +129,11 @@ const AccountPage: React.FC<AccountPageProps> = ({
               <p className="product-description">{product.description}</p>
               {product.price && (
                 <div className="product-price">${product.price}</div>
+              )}
+              {product.demandValue != null && typeof product.demandValue === 'number' && product.demandValue !== product.price && (
+                <div className="product-demand-value" style={{ color: '#ff6b35', fontWeight: 'bold', fontSize: '14px' }}>
+                  Demand Value: ${product.demandValue}
+                </div>
               )}
               {product.link && (
                 <div style={{ marginBottom: '10px' }}>

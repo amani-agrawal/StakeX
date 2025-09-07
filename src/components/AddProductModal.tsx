@@ -3,7 +3,7 @@ import { Product, Page } from '../types';
 
 interface CreateProductPageProps {
   onNavigate: (page: Page) => void;
-  onCreate: (product: Omit<Product, 'id' | 'owner' | 'isOwned' | 'isBid'>) => void;
+  onCreate: (input: { name: string; description: string; price: number; file: File; isMarketItem?: boolean; initialBid?: number }) => void;
 }
 
 type ItemType = 'market' | 'my';
@@ -18,57 +18,46 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
     price: '',            // "value"
     yearsOfUse: '',       // only for "My Item"
     certificate: 'no',    // only for "My Item"  ('yes' | 'no')
+    isMarketItem: false,  // checkbox for market item
+    initialBid: '',       // initial bid amount for market items
   });
 
-  // Support multiple (or single) image URLs
-  const [images, setImages] = useState<string[]>(['']);
+  // File upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   // -------- handlers --------
   const handleTextChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
+    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
 
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
   };
 
-  const handleImageChange = (idx: number, value: string) => {
-    setImages(prev => {
-      const next = [...prev];
-      next[idx] = value;
-      return next;
-    });
-    if (errors.images) setErrors(prev => ({ ...prev, images: '' }));
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] || null;
+    setSelectedFile(file);
+    if (errors.file) setErrors(prev => ({ ...prev, file: '' }));
   };
-
-  const addImageField = () => setImages(prev => [...prev, '']);
-  const removeImageField = (idx: number) =>
-    setImages(prev => prev.length > 1 ? prev.filter((_, i) => i !== idx) : prev);
 
   // -------- validation --------
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
     if (!formData.name.trim()) newErrors.name = 'Product name is required';
     if (!formData.description.trim()) newErrors.description = 'Product description is required';
-
-    const nonEmptyImages = images.map(s => s.trim()).filter(Boolean);
-    if (nonEmptyImages.length === 0) {
-      newErrors.images = 'At least one image URL is required';
-    } else {
-      // Validate that all image URLs are valid
-      for (let i = 0; i < nonEmptyImages.length; i++) {
-        try {
-          new URL(nonEmptyImages[i]);
-        } catch {
-          newErrors.images = 'Please enter valid image URLs (e.g., https://example.com/image.jpg)';
-          break;
-        }
-      }
+    if (!selectedFile) newErrors.file = 'Please select an image file';
+    if (!formData.price || isNaN(Number(formData.price)) || Number(formData.price) <= 0) {
+      newErrors.price = 'Price is required and must be a positive number';
     }
 
-    if (formData.price && isNaN(Number(formData.price))) newErrors.price = 'Value must be a valid number';
-
+    if (formData.isMarketItem && (!formData.initialBid || isNaN(Number(formData.initialBid)) || Number(formData.initialBid) <= 0)) {
+      newErrors.initialBid = 'Initial bid is required and must be a positive number';
+    }
+    if (formData.isMarketItem && Number(formData.initialBid) >= Number(formData.price)) {
+      newErrors.initialBid = 'Initial bid must be less than the product price';
+    }
     if (itemType === 'my' && formData.yearsOfUse && (isNaN(Number(formData.yearsOfUse)) || Number(formData.yearsOfUse) < 0)) {
       newErrors.yearsOfUse = 'Years of use must be a non-negative number';
     }
@@ -80,36 +69,34 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
   // -------- submit --------
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateForm()) return;
+    if (!validateForm() || !selectedFile) return;
 
-    const primaryImage = images.map(s => s.trim()).find(Boolean) || '';
-    
     // Debug: Log what we're about to send
     console.log('📝 Form data:', formData);
-    console.log('🖼️ Images:', images);
-    console.log('🖼️ Primary image:', primaryImage);
+    console.log('📁 Selected file:', selectedFile.name, selectedFile.size, 'bytes');
 
-    // For now, we keep the Product type unchanged (single image).
-    // We'll append My Item extras into the description so you don't need a type change yet.
+    // Build description with additional info for My Items
     const descriptionAugmented =
       itemType === 'my'
         ? `${formData.description.trim()}\n\nYears of use: ${formData.yearsOfUse || 'N/A'}\nAuthenticity certificate: ${formData.certificate === 'yes' ? 'Yes' : 'No'}`
         : formData.description.trim();
 
-    const productData: Omit<Product, 'id' | 'owner' | 'isOwned' | 'isBid'> = {
+    // Add link to description for market items
+    const finalDescription = itemType === 'market' && formData.link.trim() 
+      ? `${descriptionAugmented}\n\nProduct Link: ${formData.link.trim()}`
+      : descriptionAugmented;
+
+    const productInput = {
       name: formData.name.trim(),
-      description: descriptionAugmented,
-      image: primaryImage,
-      ...(formData.price ? { price: Number(formData.price) } : {}),
-      // Add link to description for market items instead of separate field
-      ...(itemType === 'market' && formData.link.trim() ? { 
-        description: `${descriptionAugmented}\n\nProduct Link: ${formData.link.trim()}` 
-      } : {}),
-      personalItem: itemType === 'my',
+      description: finalDescription,
+      price: Number(formData.price),
+      file: selectedFile,
+      isMarketItem: formData.isMarketItem,
+      initialBid: formData.isMarketItem ? Number(formData.initialBid) : 0,
     };
 
-    console.log('📦 Product data being sent:', productData);
-    onCreate(productData);
+    console.log('📦 Product input being sent:', productInput);
+    onCreate(productInput);
     onNavigate('account'); // or 'landing' if you prefer
   };
 
@@ -185,35 +172,25 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
           {errors.name && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.name}</div>}
         </div>
 
-        {/* Multiple / Single Images (common) */}
+        {/* Image File Upload */}
         <div className="form-group">
-          <label className="form-label">Image URL(s) <span className="required">*</span></label>
+          <label className="form-label">Product Image <span className="required">*</span></label>
           <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px 0' }}>
-            Enter a valid image URL (e.g., https://example.com/image.jpg). You can use any online image URL.
+            Upload an image file (JPG, PNG, GIF, etc.). Maximum size: 5MB.
           </p>
-          {images.map((url, idx) => (
-            <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-              <input
-                type="url"
-                value={url}
-                onChange={(e) => handleImageChange(idx, e.target.value)}
-                className="form-input"
-                placeholder="https://example.com/image.jpg"
-                style={{ flex: 1 }}
-              />
-              {images.length > 1 && (
-                <button type="button" className="btn btn-secondary" onClick={() => removeImageField(idx)}>
-                  −
-                </button>
-              )}
-              {idx === images.length - 1 && (
-                <button type="button" className="btn btn-primary" onClick={addImageField}>
-                  + Add
-                </button>
-              )}
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="form-input"
+            style={{ padding: '8px' }}
+          />
+          {selectedFile && (
+            <div style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
+              <strong>Selected:</strong> {selectedFile.name} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
             </div>
-          ))}
-          {errors.images && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.images}</div>}
+          )}
+          {errors.file && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.file}</div>}
         </div>
 
         {/* Description (common) */}
@@ -231,7 +208,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
 
         {/* Value (common) */}
         <div className="form-group">
-          <label className="form-label">Value (optional)</label>
+          <label className="form-label">Price <span className="required">*</span></label>
           <input
             type="number"
             name="price"
@@ -244,6 +221,38 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
           />
           {errors.price && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.price}</div>}
         </div>
+
+        {/* Market Item Checkbox */}
+        <div className="form-group">
+          <label className="form-label">
+            <input
+              type="checkbox"
+              name="isMarketItem"
+              checked={formData.isMarketItem}
+              onChange={handleTextChange}
+              style={{ marginRight: '8px' }}
+            />
+            Market Item (enables bidding)
+          </label>
+        </div>
+
+        {/* Initial Bid (only for market items) */}
+        {formData.isMarketItem && (
+          <div className="form-group">
+            <label className="form-label">Initial Bid <span className="required">*</span></label>
+            <input
+              type="number"
+              name="initialBid"
+              value={formData.initialBid}
+              onChange={handleTextChange}
+              className="form-input"
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+            />
+            {errors.initialBid && <div style={{ color: '#dc3545', fontSize: 12, marginTop: 5 }}>{errors.initialBid}</div>}
+          </div>
+        )}
 
         {/* Market-only: Link (optional) */}
         {itemType === 'market' && (

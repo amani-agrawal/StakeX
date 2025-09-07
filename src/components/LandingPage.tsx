@@ -5,8 +5,8 @@ import { connectLute, payAlgo } from '../wallet/lute';
 interface LandingPageProps {
   products: Product[];
   onNavigate: (page: Page) => void;
-  onAddToCart: (product: Product, bidAmount?: number) => void;
-  onAddProduct: (product: Omit<Product, 'id' | 'owner' | 'isOwned' | 'isBid'>) => void;
+  onAddToCart: (product: Product) => void;
+  onAddProduct: (input: { name: string; description: string; price: number; file: File }) => void;
 }
 
 const LandingPage: React.FC<LandingPageProps> = ({
@@ -17,10 +17,10 @@ const LandingPage: React.FC<LandingPageProps> = ({
 }) => {
   const [openProduct, setOpenProduct] = useState<Product | null>(null);
 
-  const handleAddToCart = (product: Product, e?: React.MouseEvent) => {
+  const handleAddToCart = async (product: Product, e?: React.MouseEvent) => {
     e?.stopPropagation();
-    onAddToCart(product);
-    alert('Product added to cart!');
+    await onAddToCart(product);
+    
   };
 
   const handleBid = async (product: Product, e?: React.MouseEvent) => {
@@ -45,44 +45,46 @@ const LandingPage: React.FC<LandingPageProps> = ({
     const normalized = Math.round(amount * 100) / 100; // optional: 2 decimals
 
     try {
-      // Connect to Lute wallet
-      alert('Connecting to Lute wallet...');
-      const addresses = await connectLute();
-      
-      if (!addresses || addresses.length === 0) {
-        alert('Failed to connect to Lute wallet. Please try again.');
-        return;
-      }
-
-      // Use the first connected address
-      const fromAddress = addresses[0];
-      alert(`Connected to wallet: ${fromAddress.substring(0, 8)}...`);
-
-      // For demo purposes, we'll use a placeholder recipient address
-      // In a real app, this would be the seller's address or a smart contract
-      const toAddress = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Placeholder
-      
-      // Convert ALGO to microAlgos (1 ALGO = 1,000,000 microAlgos)
-      const microAlgos = Math.round(normalized * 1000000);
-
-      alert(`Processing payment of ${normalized} ALGO (${microAlgos} microAlgos)...`);
-      
-      // Process the payment through Lute
-      const txId = await payAlgo({
-        from: fromAddress,
-        to: toAddress,
-        microAlgos: microAlgos
-      });
-
-      alert(`Payment successful! Transaction ID: ${txId}`);
-      
-      // Only add to cart and create bid if payment was successful
-      onAddToCart(product, normalized);
+      // Create bid first (independent of payment)
+      onAddToCart(product);
       alert(`Bid of $${normalized} placed for ${product.name}!`);
       
+      // Optional: Handle wallet payment separately (non-blocking)
+      try {
+        alert('Connecting to Lute wallet for payment...');
+        const addresses = await connectLute();
+        
+        if (addresses && addresses.length > 0) {
+          const fromAddress = addresses[0];
+          alert(`Connected to wallet: ${fromAddress.substring(0, 8)}...`);
+
+          // For demo purposes, we'll use a placeholder recipient address
+          const toAddress = product.owner;
+          
+          // Convert ALGO to microAlgos (1 ALGO = 1,000,000 microAlgos)
+          const microAlgos = Math.round(normalized * 1000000);
+
+          alert(`Processing payment of ${normalized} ALGO (${microAlgos} microAlgos)...`);
+          
+          // Process the payment through Lute
+          const txId = await payAlgo({
+            from: fromAddress,
+            to: toAddress,
+            microAlgos: microAlgos
+          });
+
+          alert(`Payment successful! Transaction ID: ${txId}`);
+        } else {
+          alert('Wallet connection failed, but bid was placed successfully.');
+        }
+      } catch (paymentError: any) {
+        console.error('Payment error:', paymentError);
+        alert(`Payment failed: ${paymentError?.message || 'Unknown error'}. Bid was still placed successfully.`);
+      }
+      
     } catch (error: any) {
-      console.error('Payment error:', error);
-      alert(`Payment failed: ${error?.message || 'Unknown error'}. Please try again.`);
+      console.error('Bid creation error:', error);
+      alert(`Failed to place bid: ${error?.message || 'Unknown error'}. Please try again.`);
     }
   };
 
@@ -94,8 +96,21 @@ const LandingPage: React.FC<LandingPageProps> = ({
       {/* Products Grid */}
       <div className="product-grid product-grid--big">
         {products.map((product) => {
-          // support multiple images if present
-          const imgs = (product as any).images?.length ? (product as any).images : [product.image];
+          // Use imageUrl if available, fallback to image, then placeholder
+          const imageSrc = product.imageUrl || product.image || 'https://via.placeholder.com/200x200?text=No+Image';
+          const imgs = (product as any).images?.length ? (product as any).images : [imageSrc];
+          
+          // Debug logging
+          console.log('🖼️ LandingPage product debug:', {
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            demandValue: product.demandValue,
+            imageUrl: product.imageUrl,
+            image: product.image,
+            finalImageSrc: imageSrc,
+            imgs: imgs
+          });
           return (
             <div
               key={product.id}
@@ -120,6 +135,13 @@ const LandingPage: React.FC<LandingPageProps> = ({
               {/* 3) Value */}
               {typeof product.price === 'number' && (
                 <div className="product-price product-price--big">${product.price}</div>
+              )}
+              
+              {/* 3.5) Demand Value */}
+              {product.demandValue != null && typeof product.demandValue === 'number' && product.demandValue !== product.price && (
+                <div className="product-demand-value product-demand-value--big" style={{ color: '#ff6b35', fontWeight: 'bold' }}>
+                  Demand Value: ${product.demandValue}
+                </div>
               )}
 
               {/* 4) Description */}

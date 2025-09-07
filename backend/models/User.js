@@ -34,6 +34,13 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: [200, 'Address cannot exceed 200 characters']
   },
+  phone: {
+    type: String,
+    required: [true, 'Phone number is required'],
+    trim: true,
+    maxlength: [15, 'Phone number cannot exceed 15 characters'],
+    match: [/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/, 'Please enter a valid phone number (e.g., 123-456-7890 or (123) 456-7890)']
+  },
   memberSince: {
     type: String,
     default: new Date().getFullYear().toString()
@@ -42,22 +49,31 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: 'https://via.placeholder.com/80x80/cccccc/666666?text=U'
   },
+  // Embedded subdocuments for better data structure
   cart: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product'
+    productId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Product' },
+    addedAt: { type: Date, default: Date.now }
   }],
+  
   historyOrders: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product'
+    productId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Product' },
+    priceAtPurchase: { type: Number, required: true, min: 0 },
+    purchasedAt: { type: Date, default: Date.now }
   }],
+  
   ongoingBids: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Bid'
+    productId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Product' },
+    amount: { type: Number, required: true, min: 0 },
+    placedAt: { type: Date, default: Date.now }
   }],
+  
   itemsToSell: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product'
+    productId: { type: mongoose.Schema.Types.ObjectId, required: true, ref: 'Product' },
+    askingPrice: { type: Number, min: 0 },
+    listedAt: { type: Date, default: Date.now }
   }],
+
+
   isActive: {
     type: Boolean,
     default: true

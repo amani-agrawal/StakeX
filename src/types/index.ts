@@ -2,9 +2,11 @@ export interface Product {
   id: string;
   name: string;
   description: string;
-  image: string;
+  image?: string;     // kept for backward compatibility (URL)
+  imageUrl?: string;  // served by BE route /api/posts/:id/image
   link?: string;
   price?: number;
+  demandValue?: number; // dynamically calculated demand value
   owner: string;
   isOwned: boolean;
   isBid: boolean;

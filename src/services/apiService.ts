@@ -192,6 +192,39 @@ class ApiService {
     return { success: true, data };
   }
 
+  // NEW: FormData upload for file uploads
+  async createProductWithFile(formData: FormData, token: string | null): Promise<ApiResponse<Product>> {
+    try {
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      // DO NOT set Content-Type; browser sets the boundary for multipart/form-data
+
+      const res = await fetch(`${this.baseURL}/api/posts`, {
+        method: 'POST',
+        headers,
+        body: formData,
+      });
+
+      const text = await res.text();
+      let data: any = null;
+      try { data = text ? JSON.parse(text) : null; } catch {}
+
+      if (!res.ok) {
+        return {
+          success: false,
+          message: data?.message || data?.error || text || 'Request failed',
+          data,
+        } as any;
+      }
+      return { success: true, data };
+    } catch (error: any) {
+      return {
+        success: false,
+        message: error?.message || 'Network error',
+      };
+    }
+  }
+
   async updateProduct(productId: string, productData: Partial<Product>): Promise<ApiResponse<Product>> {
     return this.apiCall(`/api/posts/${productId}`, {
       method: 'PUT',
@@ -220,18 +253,100 @@ class ApiService {
     productId: string;
     amount: number;
     message?: string;
-  }, token?: string): Promise<ApiResponse<Bid>> {
-    return this.apiCall('/api/bids', {
+  }, token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall(`/api/product-bids/${bidData.productId}`, {
       method: 'POST',
+      body: JSON.stringify({ amount: bidData.amount }),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  // New bid system methods
+  async getProductBids(productId: string): Promise<ApiResponse<any>> {
+    return this.apiCall(`/api/product-bids/${productId}`);
+  }
+
+  async removeProductBid(productId: string, bidIndex: number, token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall(`/api/product-bids/${productId}/${bidIndex}`, {
+      method: 'DELETE',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  async updateProductBids(productId: string, bids: number[], token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall(`/api/product-bids/${productId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ bids }),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  // Legacy method (keeping for compatibility)
+  async updateBid(bidId: string, bidData: Partial<Bid>, token?: string): Promise<ApiResponse<Bid>> {
+    return this.apiCall(`/api/bids/${bidId}`, {
+      method: 'PUT',
       body: JSON.stringify(bidData),
       headers: token ? { 'Authorization': `Bearer ${token}` } : {}
     });
   }
 
-  async updateBid(bidId: string, bidData: Partial<Bid>, token?: string): Promise<ApiResponse<Bid>> {
-    return this.apiCall(`/api/bids/${bidId}`, {
-      method: 'PUT',
-      body: JSON.stringify(bidData),
+  // Cart methods (new embedded structure)
+  async getCart(token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall('/api/user/cart', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  async addToCart(productId: string, token?: any): Promise<ApiResponse<any>> {
+    console.log('API Service - addToCart:');
+    return this.apiCall('/api/user/cart', {
+      method: 'POST',
+      body: JSON.stringify({ productId }),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  // updateCartQuantity method removed - no quantity support
+
+  async removeFromCart(productId: string, token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall(`/api/user/cart/${productId}`, {
+      method: 'DELETE',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  async clearCart(token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall('/api/user/cart', {
+      method: 'DELETE',
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  // Orders methods (new embedded structure)
+  async getOrders(token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall('/api/user/history', {
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  async addToOrders(productId: string, priceAtPurchase: number, token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall('/api/user/history', {
+      method: 'POST',
+      body: JSON.stringify({ productId, priceAtPurchase }),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  async purchaseFromCart(cartItems: Array<{productId: string, priceAtPurchase: number}>, token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall('/api/user/history', {
+      method: 'POST',
+      body: JSON.stringify({ items: cartItems, clearCart: true }),
+      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+    });
+  }
+
+  async getOrderStats(token?: string): Promise<ApiResponse<any>> {
+    return this.apiCall('/api/user/history/stats', {
       headers: token ? { 'Authorization': `Bearer ${token}` } : {}
     });
   }
