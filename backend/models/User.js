@@ -34,9 +34,23 @@ const userSchema = new mongoose.Schema({
     trim: true,
     maxlength: [200, 'Address cannot exceed 200 characters']
   },
+  walletAddress: {
+    type: String,
+    required: false, // Optional field
+    trim: true,
+    maxlength: [100, 'Wallet address cannot exceed 100 characters'],
+    validate: {
+      validator: function(v) {
+        // Support both Ethereum (0x...) and Algorand addresses
+        if (!v) return true; // Optional field
+        return /^0x[a-fA-F0-9]{40}$/.test(v) || /^[A-Z2-7]{58}$/.test(v);
+      },
+      message: 'Please enter a valid wallet address (Ethereum or Algorand format)'
+    }
+  },
   phone: {
     type: String,
-    required: [true, 'Phone number is required'],
+    required: false,
     trim: true,
     maxlength: [15, 'Phone number cannot exceed 15 characters'],
     match: [/^\(?([0-9]{3})\)?[-. ]?([0-9]{3})[-. ]?([0-9]{4})$/, 'Please enter a valid phone number (e.g., 123-456-7890 or (123) 456-7890)']

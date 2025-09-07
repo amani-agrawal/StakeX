@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { User, Product, Page } from '../types';
+import DemandValueBadge from './DemandValueBadge';
 
 interface AccountPageProps {
   user: User;
@@ -130,11 +131,7 @@ const AccountPage: React.FC<AccountPageProps> = ({
               {product.price && (
                 <div className="product-price">${product.price}</div>
               )}
-              {product.demandValue != null && typeof product.demandValue === 'number' && product.demandValue !== product.price && (
-                <div className="product-demand-value" style={{ color: '#ff6b35', fontWeight: 'bold', fontSize: '14px' }}>
-                  Demand Value: ${product.demandValue}
-                </div>
-              )}
+              <DemandValueBadge value={product.demandValue} />
               {product.link && (
                 <div style={{ marginBottom: '10px' }}>
                   <a 

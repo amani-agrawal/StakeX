@@ -103,9 +103,10 @@ class ApiService {
       }
 
       // Unwrap once here - if backend returns {success: true, data: {...}}, extract the data
-      const payload = (json && typeof json === 'object' && 'data' in json) ? json.data : json;
+      
 
       console.log('✅ API call successful');
+      const payload = (json && typeof json === 'object' && 'data' in json) ? json.data : json;
       return {
         success: true,
         data: payload,
@@ -297,13 +298,28 @@ class ApiService {
     });
   }
 
-  async addToCart(productId: string, token?: any): Promise<ApiResponse<any>> {
-    console.log('API Service - addToCart:');
-    return this.apiCall('/api/user/cart', {
-      method: 'POST',
-      body: JSON.stringify({ productId }),
-      headers: token ? { 'Authorization': `Bearer ${token}` } : {}
-    });
+  async addToCart(productId: string, userId: string, token?: any): Promise<ApiResponse<any>> {
+    console.log('API Service - addToCart:', { productId, hasToken: !!token });
+    
+    try {
+      const response = await fetch(`${this.baseURL}/api/user/cart`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify( {productId, userId} )
+      });
+
+      if (!response.ok) {
+        throw response.status;
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('addToCart API error:', error);
+      throw error;
+    }
   }
 
   // updateCartQuantity method removed - no quantity support

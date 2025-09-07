@@ -28,6 +28,12 @@ export interface CartItem {
   addedAt: Date;
 }
 
+export interface HistoryOrder {
+  productId: string;
+  priceAtPurchase: number;
+  purchasedAt: string;
+}
+
 export type Page = 'landing' | 'account' | 'cart' | 'post' | 'order' | 'auth';
 
 export interface AppState {
@@ -37,4 +43,6 @@ export interface AppState {
   cart: CartItem[];
   myProducts: Product[];
   marketProducts: Product[];
+  orderHistory: HistoryOrder[];
+  orderProducts: Product[];
 }

@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const Product = require('../models/Product');
+const { updateLanguageServiceSourceFile } = require('typescript');
 
 const router = express.Router();
 const isObjectId = (id) => mongoose.Types.ObjectId.isValid(id);
@@ -52,31 +53,27 @@ router.get('/cart', async (req, res) => {
 // POST /api/user/cart  { productId }
 router.post('/cart', async (req, res) => {
   try {
-    const { productId } = req.body;
-    
-    // Better error handling
-    if (!productId) {
-      return res.status(400).json({ success: false, message: 'ProductId is required' });
+    // Validate productId
+    const { productId, userId } = req.body;
+    if (!productId || typeof productId !== 'string') {
+      return res.status(400).json({ success: false, message: 'productId (string) is required' });
     }
     
 
-    const user = await User.findById(req.user.userId);
-    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
-
-    // Check if product exists
-    const product = await Product.findById(productId);
-    if (!product) return res.status(404).json({ success: false, message: 'Product not found' });
-
-    // Check if item already in cart
-    const existingItem = user.cart.find(item => item.productId.toString() === productId);
-    if (existingItem) {
-      return res.status(400).json({ success: false, message: 'Item already in cart' });
+    // Verify product exists
+    const exists = await Product.exists({ _id: productId });
+    if (!exists) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
     }
 
-    // Add item to cart
-    user.cart.push({ productId, addedAt: new Date() });
-    await user.save();
-    res.json({ success: true, message: 'Item added to cart', data: { cart: user.cart } });
+    // Load user
+    const user = await User.findById(userId);
+    if (!user) return res.status(403).json({ success: false, message: 'User not found' });
+
+    // Embedded cart: [{ productId, quantity, addedAt }]
+    console.log('userId', userId);
+    await user.updateOne({_id:ObjectId(userId)}, { $push: { cart: productId  } });
+    res.json({ success: true, message: 'Cart updated', data: { cart: user.cart } });
   } catch (e) {
     console.error('Cart addition error:', e);
     res.status(500).json({ success: false, message: e.message });

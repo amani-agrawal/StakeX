@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Product, Page } from '../types';
 import { connectLute, payAlgo } from '../wallet/lute';
-
+import DemandValueBadge from './DemandValueBadge';
+window.Buffer = window.Buffer || require('buffer').Buffer;
 interface LandingPageProps {
   products: Product[];
   onNavigate: (page: Page) => void;
@@ -59,13 +60,15 @@ const LandingPage: React.FC<LandingPageProps> = ({
           alert(`Connected to wallet: ${fromAddress.substring(0, 8)}...`);
 
           // For demo purposes, we'll use a placeholder recipient address
-          const toAddress = product.owner;
+          const toAddress = 'Y76M3MSY6DKBRHBL7C3NNDXGS5IIMQVQVUAB6MP4XEMMGVF2QWNPL226CA';
           
           // Convert ALGO to microAlgos (1 ALGO = 1,000,000 microAlgos)
           const microAlgos = Math.round(normalized * 1000000);
 
           alert(`Processing payment of ${normalized} ALGO (${microAlgos} microAlgos)...`);
-          
+          console.log('fromAddress', fromAddress);
+          console.log('toAddress', toAddress);
+          console.log('microAlgos', microAlgos);
           // Process the payment through Lute
           const txId = await payAlgo({
             from: fromAddress,
@@ -127,7 +130,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
               <div className="product-images-scroll" aria-label={`${product.name} images`}>
                 {imgs.map((src: string, i: number) => (
                   <div className="product-image-slide" key={i}>
-                    <img src={src} alt={`${product.name} ${i + 1}`} className="product-image--big" />
+                    <img src={'https://upload.wikimedia.org/wikipedia/commons/e/ec/Citizen_wristwatch.jpg'} alt={`${product.name} ${i + 1}`} className="product-image--big" />
                   </div>
                 ))}
               </div>
@@ -138,11 +141,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
               )}
               
               {/* 3.5) Demand Value */}
-              {product.demandValue != null && typeof product.demandValue === 'number' && product.demandValue !== product.price && (
-                <div className="product-demand-value product-demand-value--big" style={{ color: '#ff6b35', fontWeight: 'bold' }}>
-                  Demand Value: ${product.demandValue}
-                </div>
-              )}
+              <DemandValueBadge value={product.demandValue} className="product-demand-value--big" />
 
               {/* 4) Description */}
               <p className="product-description product-description--big">{product.description}</p>

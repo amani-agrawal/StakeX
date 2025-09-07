@@ -13,6 +13,7 @@ import { AppState, Page, User, Product } from './types';
 import { connectLute, payAlgo } from "./wallet/lute";
 import { apiService } from './services/apiService';
 import { APP_CONFIG } from './config/appConfig';
+import { getId } from './utils/id';
 
 const initialUser: User = {
   id: '1',
@@ -35,7 +36,9 @@ function App() {
     products: initialProducts,
     cart: [],
     myProducts: [],
-    marketProducts: initialProducts
+    marketProducts: initialProducts,
+    orderHistory: [],
+    orderProducts: []
   });
   const [address, setAddress] = useState("");
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
@@ -264,23 +267,26 @@ function App() {
       return;
     }
     
+    // Defensive check for valid product ID
+    const productId = String(getId(product));
+    if (!productId) {
+      alert('Product has no valid id. Please refresh.');
+      return;
+    }
+    
     // Debug logging
-    console.log('Adding to cart:', { productId: product.id, productName: product.name });
+    console.log('Adding to cart:', { productId, productName: product.name });
     
     // Regular cart addition (no bid) - sync with backend
     try {
-      const cartResponse = await apiService.addToCart(String(product.id), token);
-      if (cartResponse.success) {
-        // Refresh cart from backend
-        await loadCartFromBackend();
-        alert('Item added to cart successfully!');
-      } else {
-        console.error('Cart API error:', cartResponse);
-        alert(cartResponse.message || 'Failed to add item to cart');
-      }
-    } catch (error) {
-      console.error('Cart addition error:', error);
-      alert('Failed to add item to cart. Please try again.');
+      await apiService.addToCart(productId,appState.user.id || '', token);
+      await loadCartFromBackend();
+      alert('Item added to cart successfully!');
+    } catch (error: any) {
+      // Show backend message if present
+      const msg = error?.message || 'Failed to add item to cart';
+      alert(msg);
+      console.error('addToCart failed:', error);
     }
   };
 
@@ -303,6 +309,36 @@ function App() {
       }
     } catch (error) {
       console.error('Error loading cart from backend:', error);
+    }
+  };
+
+  const loadOrders = async () => {
+    if (!token) return;
+    
+    try {
+      const ordersResponse = await apiService.getOrders(token);
+      if (ordersResponse.success && ordersResponse.data) {
+        const { historyOrders } = ordersResponse.data;
+        
+        // Map the order history and extract product data
+        const orderHistory = historyOrders.map((order: any) => ({
+          productId: order.productId._id || order.productId,
+          priceAtPurchase: order.priceAtPurchase,
+          purchasedAt: order.purchasedAt
+        }));
+        
+        const orderProducts = historyOrders.map((order: any) => 
+          mapApiProduct(order.productId, appState.user?.id || '')
+        );
+        
+        setAppState(prev => ({
+          ...prev,
+          orderHistory,
+          orderProducts
+        }));
+      }
+    } catch (error) {
+      console.error('Failed to load orders:', error);
     }
   };
 
@@ -382,8 +418,9 @@ function App() {
         setToken(authToken);
         setIsAuthenticated(true);
         
-        // Load cart from backend after authentication
+        // Load cart and orders from backend after authentication
         await loadCartFromBackend();
+        await loadOrders();
         
         alert('Login successful!');
       } else {
@@ -506,8 +543,8 @@ function App() {
         return (
           <div className="withTopbar">
             <OrdersPage
-              cart={appState.cart}
-              ownedProducts={appState.myProducts}
+              orders={appState.orderHistory}
+              products={appState.orderProducts}
               onNavigate={navigateTo}
             />
           </div>

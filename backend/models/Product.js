@@ -42,4 +42,20 @@ const ProductSchema = new mongoose.Schema(
 
 ProductSchema.index({ owner: 1, createdAt: -1 });
 ProductSchema.index({ daoId: 1 }); // Additional index for daoId
+
+// Helper method to compute demand value from source of truth
+ProductSchema.methods.computeDemandValue = function () {
+  const base = (this.isMarketItem && this.initialBid) ? (this.price - this.initialBid) : this.price;
+  const totalBids = Array.isArray(this.bids) ? this.bids.reduce((a, b) => a + b, 0) : 0;
+  return Math.max(0, base - totalBids);
+};
+
+// Pre-save hook to automatically recalculate demandValue
+ProductSchema.pre('save', function(next) {
+  if (this.isModified('price') || this.isModified('initialBid') || this.isModified('bids') || this.demandValue == null) {
+    this.demandValue = this.computeDemandValue();
+  }
+  next();
+});
+
 module.exports = mongoose.model('Product', ProductSchema);

@@ -1,5 +1,6 @@
 import React from 'react';
 import { CartItem, Page, Product } from '../types';
+import DemandValueBadge from './DemandValueBadge';
 import { connectLute, payAlgo } from '../wallet/lute';
 
 interface CartPageProps {
@@ -46,7 +47,7 @@ const CartPage: React.FC<CartPageProps> = ({ cart, onNavigate, onRemoveFromCart,
           alert(`Connected to wallet: ${fromAddress.substring(0, 8)}...`);
 
           // For demo purposes, we'll use a placeholder recipient address
-          const toAddress = product.owner;
+          const toAddress = '0xAa82ef173F197B8c4433FE07C2268bF9b460FE84';
           
           // Convert ALGO to microAlgos (1 ALGO = 1,000,000 microAlgos)
           const microAlgos = Math.round(normalized * 1000000);
@@ -93,11 +94,7 @@ const CartPage: React.FC<CartPageProps> = ({ cart, onNavigate, onRemoveFromCart,
                 <div className="cart-item-price">
                   {item.bidAmount ? `Bid: $${item.bidAmount}` : `Price: $${item.product.price || 'N/A'}`}
                 </div>
-                {item.product.demandValue != null && typeof item.product.demandValue === 'number' && item.product.demandValue !== item.product.price && (
-                  <div className="cart-item-demand-value" style={{ color: '#ff6b35', fontWeight: 'bold', fontSize: '14px' }}>
-                    Demand Value: ${item.product.demandValue}
-                  </div>
-                )}
+                <DemandValueBadge value={item.product.demandValue} />
                 <div style={{ fontSize: '12px', color: '#666', marginTop: '5px' }}>
                   Added: {item.addedAt.toLocaleDateString()}
                 </div>

@@ -80,10 +80,8 @@ router.post('/:productId', requireAuth, async (req, res) => {
     // Add bid to the product's bids array
     product.bids.push(amount);
     
-    // Recalculate demandValue
-    const totalBids = product.bids.reduce((sum, bid) => sum + bid, 0);
-    const newDemandValue = Math.max(0, (product.isMarketItem && product.initialBid ? product.price - product.initialBid : product.price) - totalBids);
-    product.demandValue = newDemandValue;
+    // Recalculate demandValue using the centralized method
+    product.demandValue = product.computeDemandValue();
     
     await product.save();
 
@@ -136,10 +134,8 @@ router.delete('/:productId/:bidIndex', requireAuth, async (req, res) => {
     const removedBid = product.bids[index];
     product.bids.splice(index, 1);
     
-    // Recalculate demandValue
-    const totalBids = product.bids.reduce((sum, bid) => sum + bid, 0);
-    const newDemandValue = Math.max(0, (product.isMarketItem && product.initialBid ? product.price - product.initialBid : product.price) - totalBids);
-    product.demandValue = newDemandValue;
+    // Recalculate demandValue using the centralized method
+    product.demandValue = product.computeDemandValue();
     
     await product.save();
 
@@ -190,10 +186,8 @@ router.put('/:productId', requireAuth, async (req, res) => {
     
     product.bids = validBids;
     
-    // Recalculate demandValue
-    const totalBids = product.bids.reduce((sum, bid) => sum + bid, 0);
-    const newDemandValue = Math.max(0, (product.isMarketItem && product.initialBid ? product.price - product.initialBid : product.price) - totalBids);
-    product.demandValue = newDemandValue;
+    // Recalculate demandValue using the centralized method
+    product.demandValue = product.computeDemandValue();
     
     await product.save();
 
