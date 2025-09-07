@@ -231,7 +231,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
 
         {/* Value (common) */}
         <div className="form-group">
-          <label className="form-label">Value (optional)</label>
+          <label className="form-label">Value</label>
           <input
             type="number"
             name="price"
