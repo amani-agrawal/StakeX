@@ -110,6 +110,7 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
 
     console.log('📦 Product data being sent:', productData);
     onCreate(productData);
+
     onNavigate('account'); // or 'landing' if you prefer
   };
 

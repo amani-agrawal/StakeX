@@ -24,6 +24,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
   };
 
   const handleBid = async (product: Product, e?: React.MouseEvent) => {
+    //const { addMember } = useDao()
     e?.stopPropagation();
 
     // Demand value = product.price
@@ -60,7 +61,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
 
       // For demo purposes, we'll use a placeholder recipient address
       // In a real app, this would be the seller's address or a smart contract
-      const toAddress = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Placeholder
+      const toAddress = product.owner; // Placeholder
       
       // Convert ALGO to microAlgos (1 ALGO = 1,000,000 microAlgos)
       const microAlgos = Math.round(normalized * 1000000);
@@ -79,7 +80,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
       // Only add to cart and create bid if payment was successful
       onAddToCart(product, normalized);
       alert(`Bid of $${normalized} placed for ${product.name}!`);
-      
+      //await addMember(product.daoId, addresses[0]);
     } catch (error: any) {
       console.error('Payment error:', error);
       alert(`Payment failed: ${error?.message || 'Unknown error'}. Please try again.`);

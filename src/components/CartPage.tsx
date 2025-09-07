@@ -10,7 +10,9 @@ interface CartPageProps {
 }
 
 const CartPage: React.FC<CartPageProps> = ({ cart, onNavigate, onRemoveFromCart, onAddToCart }) => {
+  //const { addMember } = useDao()
   const handleBid = async (product: Product, e?: React.MouseEvent) => {
+    
     e?.stopPropagation();
 
     // Demand value = product.price
@@ -47,7 +49,7 @@ const CartPage: React.FC<CartPageProps> = ({ cart, onNavigate, onRemoveFromCart,
 
       // For demo purposes, we'll use a placeholder recipient address
       // In a real app, this would be the seller's address or a smart contract
-      const toAddress = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Placeholder
+      const toAddress = product.owner; // Placeholder
       
       // Convert ALGO to microAlgos (1 ALGO = 1,000,000 microAlgos)
       const microAlgos = Math.round(normalized * 1000000);
@@ -66,6 +68,7 @@ const CartPage: React.FC<CartPageProps> = ({ cart, onNavigate, onRemoveFromCart,
       // Only add to cart and create bid if payment was successful
       onAddToCart(product, normalized);
       alert(`Bid of $${normalized} placed for ${product.name}!`);
+      //await addMember(product.daoId, addresses[0]);
       
     } catch (error: any) {
       console.error('Payment error:', error);

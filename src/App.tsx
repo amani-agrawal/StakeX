@@ -12,6 +12,12 @@ import FixedSidebar from './components/OverlayDrawer';
 import { AppState, Page, User, Product } from './types';
 import { connectLute, payAlgo } from "./wallet/lute";
 import { apiService } from './services/apiService';
+import fs from "node:fs/promises"
+import path from "node:path"
+import process from "node:process"
+import algosdk from "algosdk"
+import { DAO_APPROVAL_B64, DAO_CLEAR_B64 } from "./daoArtifacts";
+
 
 const initialUser: User = {
   id: '1',
@@ -26,6 +32,7 @@ const initialProducts: Product[] = [
 ];
 
 function App() {
+  //const { createDao, addMember } = useDao()
   const [showLogo, setShowLogo] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [appState, setAppState] = useState<AppState>({
@@ -199,6 +206,7 @@ function App() {
   const addProduct = async (
     product: Omit<Product, 'id' | 'owner' | 'isOwned' | 'isBid'>
   ) => {
+    
     if (!appState.user || !token) {
       alert('Please log in to add products');
       return;
@@ -228,7 +236,7 @@ function App() {
       owner: appState.user.id,
       owner_id: appState.user.id,
       on_market: true,
-      bids: [],
+      bids: []
     };
 
     console.log('🚀 POST /posts payload:', payloadForApi);
@@ -248,7 +256,28 @@ function App() {
       return;
     }
 
-    // Normalize server → FE
+    /**
+    const res = await createDao({
+      factoryAppId: 745494475,
+      meta: '{name} DAO',                            // e.g. '{"name":"StakeX DAO","uri":"ipfs://..."}'
+      daoApprovalB64: DAO_APPROVAL_B64,
+      daoClearB64: DAO_CLEAR_B64,
+      schema: {
+        globalInts: 8,
+        globalBytes: 8,
+        localInts: 8,
+        localBytes: 8,
+        extraPages: 0,
+      },
+      asa: { enabled: false },
+    })*/
+
+    // convert bigints if you need numbers
+    //const daoId = Number(res.daoId)
+    //await addMember(daoId, appState.user.id)
+
+    //UPDATE DAO ID TO DATABASE
+    
     const p: any = created.data;
     const newProduct: Product = {
       id: p._id || p.id || '',
