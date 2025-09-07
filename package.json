@@ -7,6 +7,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "algosdk": "^3.4.0",
+    "fuse.js": "^7.1.0",
     "lute-connect": "^1.6.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",

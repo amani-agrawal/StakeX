@@ -3,8 +3,7 @@ import { User, Product, Page } from '../types';
 
 interface AccountPageProps {
   user: User;
-  myProducts: Product[];
-  marketProducts: Product[];
+  currentProducts: Product[];
   onNavigate: (page: Page) => void;
   onAddToCart: (product: Product, bidAmount?: number) => void;
   onUpdateProfilePicture?: (imageUrl: string) => void;
@@ -12,8 +11,7 @@ interface AccountPageProps {
 
 const AccountPage: React.FC<AccountPageProps> = ({ 
   user, 
-  myProducts, 
-  marketProducts, 
+  currentProducts, 
   onNavigate, 
   onAddToCart,
   onUpdateProfilePicture
@@ -54,25 +52,8 @@ const AccountPage: React.FC<AccountPageProps> = ({
     fileInputRef.current?.click();
   };
 
-  const currentProducts = activeTab === 'my' ? myProducts : marketProducts;
-
   return (
     <div className="page-container">
-      {/* Top Bar */}
-      <div className="top-bar">
-        <button 
-          className="btn btn-secondary"
-          onClick={() => onNavigate('cart')}
-        >
-          Cart
-        </button>
-        <button 
-          className="btn btn-secondary"
-          onClick={() => onNavigate('order')}
-        >
-          Orders
-        </button>
-      </div>
 
       {/* Profile Section */}
       <div className="profile-section">
@@ -137,7 +118,7 @@ const AccountPage: React.FC<AccountPageProps> = ({
       {/* Products List */}
       <div className="product-grid">
         {currentProducts.length > 0 ? (
-          currentProducts.map((product) => (
+          currentProducts.map((product) => ( ((product.personalItem===true && activeTab==='my') || (product.personalItem===false && activeTab==='market')) && (
             <div key={product.id} className="product-card">
               <img 
                 src={product.image} 
@@ -176,7 +157,7 @@ const AccountPage: React.FC<AccountPageProps> = ({
                 </button>
               </div>
             </div>
-          ))
+          )))
         ) : (
           <div className="empty-state">
             <div className="empty-state-icon">📦</div>
@@ -185,29 +166,6 @@ const AccountPage: React.FC<AccountPageProps> = ({
         )}
       </div>
 
-      {/* Bottom Navigation */}
-      <div className="bottom-bar">
-        <button 
-          className="btn btn-secondary"
-          onClick={() => onNavigate('landing')}
-        >
-          Home
-        </button>
-        <button 
-          className="btn btn-add"
-          
-          onClick={() => onNavigate('post')}
-          title="Add New Product"
-        >
-          +
-        </button>
-        <button 
-          className="btn btn-primary"
-          onClick={() => onNavigate('account')}
-        >
-          Account
-        </button>
-      </div>
     </div>
   );
 };

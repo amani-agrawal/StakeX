@@ -8,6 +8,7 @@ export interface Product {
   owner: string;
   isOwned: boolean;
   isBid: boolean;
+  personalItem: boolean;
 }
 
 export interface User {
@@ -25,11 +26,11 @@ export interface CartItem {
   addedAt: Date;
 }
 
-export type Page = 'landing' | 'account' | 'cart' | 'post' | 'order';
+export type Page = 'landing' | 'account' | 'cart' | 'post' | 'order' | 'auth';
 
 export interface AppState {
   currentPage: Page;
-  user: User;
+  user: User | null;
   products: Product[];
   cart: CartItem[];
   myProducts: Product[];

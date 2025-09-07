@@ -53,7 +53,19 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
     if (!formData.description.trim()) newErrors.description = 'Product description is required';
 
     const nonEmptyImages = images.map(s => s.trim()).filter(Boolean);
-    if (nonEmptyImages.length === 0) newErrors.images = 'At least one image URL is required';
+    if (nonEmptyImages.length === 0) {
+      newErrors.images = 'At least one image URL is required';
+    } else {
+      // Validate that all image URLs are valid
+      for (let i = 0; i < nonEmptyImages.length; i++) {
+        try {
+          new URL(nonEmptyImages[i]);
+        } catch {
+          newErrors.images = 'Please enter valid image URLs (e.g., https://example.com/image.jpg)';
+          break;
+        }
+      }
+    }
 
     if (formData.price && isNaN(Number(formData.price))) newErrors.price = 'Value must be a valid number';
 
@@ -71,9 +83,14 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
     if (!validateForm()) return;
 
     const primaryImage = images.map(s => s.trim()).find(Boolean) || '';
+    
+    // Debug: Log what we're about to send
+    console.log('📝 Form data:', formData);
+    console.log('🖼️ Images:', images);
+    console.log('🖼️ Primary image:', primaryImage);
 
     // For now, we keep the Product type unchanged (single image).
-    // We’ll append My Item extras into the description so you don’t need a type change yet.
+    // We'll append My Item extras into the description so you don't need a type change yet.
     const descriptionAugmented =
       itemType === 'my'
         ? `${formData.description.trim()}\n\nYears of use: ${formData.yearsOfUse || 'N/A'}\nAuthenticity certificate: ${formData.certificate === 'yes' ? 'Yes' : 'No'}`
@@ -83,10 +100,15 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
       name: formData.name.trim(),
       description: descriptionAugmented,
       image: primaryImage,
-      ...(itemType === 'market' && formData.link.trim() ? { link: formData.link.trim() } : {}),
       ...(formData.price ? { price: Number(formData.price) } : {}),
+      // Add link to description for market items instead of separate field
+      ...(itemType === 'market' && formData.link.trim() ? { 
+        description: `${descriptionAugmented}\n\nProduct Link: ${formData.link.trim()}` 
+      } : {}),
+      personalItem: itemType === 'my',
     };
 
+    console.log('📦 Product data being sent:', productData);
     onCreate(productData);
     onNavigate('account'); // or 'landing' if you prefer
   };
@@ -95,10 +117,6 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
   return (
     <div className="page-container">
       {/* Top Bar */}
-      <div className="top-bar">
-        <button className="btn btn-secondary" onClick={() => onNavigate('cart')}>Cart</button>
-        <button className="btn btn-secondary" onClick={() => onNavigate('order')}>Orders</button>
-      </div>
 
       {/* Switch: Market Item / My Item */}
       <div style={{ padding: '16px', display: 'flex', gap: 8 }}>
@@ -170,6 +188,9 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
         {/* Multiple / Single Images (common) */}
         <div className="form-group">
           <label className="form-label">Image URL(s) <span className="required">*</span></label>
+          <p style={{ fontSize: 12, color: '#666', margin: '0 0 8px 0' }}>
+            Enter a valid image URL (e.g., https://example.com/image.jpg). You can use any online image URL.
+          </p>
           {images.map((url, idx) => (
             <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
               <input
@@ -283,18 +304,6 @@ const CreateProductPage: React.FC<CreateProductPageProps> = ({ onNavigate, onCre
       </form>
 
       {/* Bottom Navigation */}
-      <div className="bottom-bar">
-        <button className="btn btn-secondary" onClick={() => onNavigate('landing')}>Home</button>
-        <button
-          className="btn btn-add"
-          style={{ background: '#7c3aed', color: '#fff' }}
-          onClick={() => onNavigate('post')}
-          title="Add New Product"
-        >
-          +
-        </button>
-        <button className="btn btn-secondary" onClick={() => onNavigate('account')}>Account</button>
-      </div>
     </div>
   );
 };

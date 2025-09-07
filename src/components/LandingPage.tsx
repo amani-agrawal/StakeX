@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Product, Page } from '../types';
+import { connectLute, payAlgo } from '../wallet/lute';
 
 interface LandingPageProps {
   products: Product[];
@@ -22,7 +23,7 @@ const LandingPage: React.FC<LandingPageProps> = ({
     alert('Product added to cart!');
   };
 
-  const handleBid = (product: Product, e?: React.MouseEvent) => {
+  const handleBid = async (product: Product, e?: React.MouseEvent) => {
     e?.stopPropagation();
 
     // Demand value = product.price
@@ -42,18 +43,53 @@ const LandingPage: React.FC<LandingPageProps> = ({
     }
 
     const normalized = Math.round(amount * 100) / 100; // optional: 2 decimals
-    onAddToCart(product, normalized);
-    alert(`Bid of $${normalized} placed for ${product.name}!`);
+
+    try {
+      // Connect to Lute wallet
+      alert('Connecting to Lute wallet...');
+      const addresses = await connectLute();
+      
+      if (!addresses || addresses.length === 0) {
+        alert('Failed to connect to Lute wallet. Please try again.');
+        return;
+      }
+
+      // Use the first connected address
+      const fromAddress = addresses[0];
+      alert(`Connected to wallet: ${fromAddress.substring(0, 8)}...`);
+
+      // For demo purposes, we'll use a placeholder recipient address
+      // In a real app, this would be the seller's address or a smart contract
+      const toAddress = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; // Placeholder
+      
+      // Convert ALGO to microAlgos (1 ALGO = 1,000,000 microAlgos)
+      const microAlgos = Math.round(normalized * 1000000);
+
+      alert(`Processing payment of ${normalized} ALGO (${microAlgos} microAlgos)...`);
+      
+      // Process the payment through Lute
+      const txId = await payAlgo({
+        from: fromAddress,
+        to: toAddress,
+        microAlgos: microAlgos
+      });
+
+      alert(`Payment successful! Transaction ID: ${txId}`);
+      
+      // Only add to cart and create bid if payment was successful
+      onAddToCart(product, normalized);
+      alert(`Bid of $${normalized} placed for ${product.name}!`);
+      
+    } catch (error: any) {
+      console.error('Payment error:', error);
+      alert(`Payment failed: ${error?.message || 'Unknown error'}. Please try again.`);
+    }
   };
 
 
   return (
     <div className="page-container">
       {/* Top Bar */}
-      <div className="top-bar">
-        <button className="btn btn-secondary" onClick={() => onNavigate('cart')}>Cart</button>
-        <button className="btn btn-secondary" onClick={() => onNavigate('order')}>Orders</button>
-      </div>
 
       {/* Products Grid */}
       <div className="product-grid product-grid--big">
@@ -126,11 +162,6 @@ const LandingPage: React.FC<LandingPageProps> = ({
       </div>
 
       {/* Bottom Navigation */}
-      <div className="bottom-bar">
-        <button className="btn btn-primary" onClick={() => onNavigate('landing')}>Home</button>
-        <button className="btn btn-add" onClick={() => onNavigate('post')} title="Add New Product">+</button>
-        <button className="btn btn-secondary" onClick={() => onNavigate('account')}>Account</button>
-      </div>
 
       {/* Optional: keep your existing modal; no change required */}
     </div>
